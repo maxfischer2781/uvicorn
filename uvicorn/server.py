@@ -80,7 +80,7 @@ class Server:
 
         self.lifespan = config.lifespan_class(config)
 
-        with self._graceful_signal_handling():
+        with self._capture_exit_signals():
             message = "Started server process [%d]"
             color_message = (
                 "Started server process [" + click.style("%d", fg="cyan") + "]"
@@ -299,7 +299,7 @@ class Server:
             await self.lifespan.shutdown()
 
     @contextlib.contextmanager
-    def _graceful_signal_handling(self) -> Iterator[None]:
+    def _capture_exit_signals(self) -> Iterator[None]:
         if threading.current_thread() is not threading.main_thread():
             # Signals can only be listened to from the main thread.
             yield
