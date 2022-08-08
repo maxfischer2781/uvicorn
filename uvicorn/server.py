@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import functools
 import logging
 import os
@@ -8,10 +9,9 @@ import socket
 import sys
 import threading
 import time
-import contextlib
 from email.utils import formatdate
 from types import FrameType
-from typing import TYPE_CHECKING, List, Optional, Sequence, Set, Tuple, Union, Iterator
+from typing import TYPE_CHECKING, Iterator, List, Optional, Sequence, Set, Tuple, Union
 
 import click
 
