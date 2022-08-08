@@ -8,9 +8,10 @@ import socket
 import sys
 import threading
 import time
+import contextlib
 from email.utils import formatdate
 from types import FrameType
-from typing import TYPE_CHECKING, List, Optional, Sequence, Set, Tuple, Union
+from typing import TYPE_CHECKING, List, Optional, Sequence, Set, Tuple, Union, Iterator
 
 import click
 
@@ -54,6 +55,7 @@ class Server:
         self.should_exit = False
         self.force_exit = False
         self.last_notified = 0.0
+        self._delayed_signal: Optional[int] = None
 
     def run(self, sockets: Optional[List[socket.socket]] = None) -> None:
         self.config.setup_event_loop()
@@ -68,21 +70,24 @@ class Server:
 
         self.lifespan = config.lifespan_class(config)
 
-        self.install_signal_handlers()
+        with self._graceful_signal_handling():
+            message = "Started server process [%d]"
+            color_message = (
+                "Started server process [" + click.style("%d", fg="cyan") + "]"
+            )
+            logger.info(message, process_id, extra={"color_message": color_message})
 
-        message = "Started server process [%d]"
-        color_message = "Started server process [" + click.style("%d", fg="cyan") + "]"
-        logger.info(message, process_id, extra={"color_message": color_message})
+            await self.startup(sockets=sockets)
+            if self.should_exit:
+                return
+            await self.main_loop()
+            await self.shutdown(sockets=sockets)
 
-        await self.startup(sockets=sockets)
-        if self.should_exit:
-            return
-        await self.main_loop()
-        await self.shutdown(sockets=sockets)
-
-        message = "Finished server process [%d]"
-        color_message = "Finished server process [" + click.style("%d", fg="cyan") + "]"
-        logger.info(message, process_id, extra={"color_message": color_message})
+            message = "Finished server process [%d]"
+            color_message = (
+                "Finished server process [" + click.style("%d", fg="cyan") + "]"
+            )
+            logger.info(message, process_id, extra={"color_message": color_message})
 
     async def startup(self, sockets: list = None) -> None:
         await self.lifespan.startup()
@@ -283,6 +288,24 @@ class Server:
         if not self.force_exit:
             await self.lifespan.shutdown()
 
+    @contextlib.contextmanager
+    def _graceful_signal_handling(self) -> Iterator[None]:
+        if threading.current_thread() is not threading.main_thread():
+            # Signals can only be listened to from the main thread.
+            yield
+        else:
+            # Use signal.signal instead of loop.add_signal_handler since
+            # we need the original signal handlers to restore them.
+            original_handlers = (
+                (sig, signal.signal(sig, self.handle_exit)) for sig in HANDLED_SIGNALS
+            )
+            yield
+            for sig, handler in original_handlers:
+                signal.signal(sig, handler)
+            # replay signals that we got to trigger default signal behaviour
+            if self._delayed_signal is not None:
+                os.kill(os.getpid(), self._delayed_signal)
+
     def install_signal_handlers(self) -> None:
         if threading.current_thread() is not threading.main_thread():
             # Signals can only be listened to from the main thread.
@@ -299,7 +322,7 @@ class Server:
                 signal.signal(sig, self.handle_exit)
 
     def handle_exit(self, sig: int, frame: Optional[FrameType]) -> None:
-
+        self._delayed_signal = sig
         if self.should_exit and sig == signal.SIGINT:
             self.force_exit = True
         else:
