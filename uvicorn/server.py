@@ -59,9 +59,19 @@ class Server:
 
     def run(self, sockets: Optional[List[socket.socket]] = None) -> None:
         self.config.setup_event_loop()
-        return asyncio.run(self.serve(sockets=sockets))
+        try:
+            return asyncio.run(self.serve(sockets=sockets))
+        except KeyboardInterrupt:
+            pass
 
     async def serve(self, sockets: Optional[List[socket.socket]] = None) -> None:
+        """
+        Serve requests asynchronously
+
+        This method should be used from an already existing `async` environment
+        to run the server alongside other `async` tasks.
+        The program's signal handlers are modified while this method is running.
+        """
         process_id = os.getpid()
 
         config = self.config
