@@ -304,11 +304,10 @@ class Server:
             # Signals can only be listened to from the main thread.
             yield
         else:
-            # Use signal.signal instead of loop.add_signal_handler since
-            # we need the original signal handlers to restore them.
             original_handlers = (
-                (sig, signal.signal(sig, self.handle_exit)) for sig in HANDLED_SIGNALS
+                (sig, signal.getsignal(sig)) for sig in HANDLED_SIGNALS
             )
+            self.install_signal_handlers()
             yield
             for sig, handler in original_handlers:
                 signal.signal(sig, handler)
