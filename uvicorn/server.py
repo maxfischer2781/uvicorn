@@ -304,9 +304,9 @@ class Server:
             # Signals can only be listened to from the main thread.
             yield
         else:
-            original_handlers = (
+            original_handlers = [
                 (sig, signal.getsignal(sig)) for sig in HANDLED_SIGNALS
-            )
+            ]
             self.install_signal_handlers()
             yield
             for sig, handler in original_handlers:
