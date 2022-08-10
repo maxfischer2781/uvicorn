@@ -1,6 +1,7 @@
 import asyncio
 import os
 import signal
+import sys
 
 import pytest
 
@@ -29,6 +30,7 @@ async def dummy_app(scope, receive, send):
 
 
 @pytest.mark.anyio
+@pytest.mark.skipif(sys.platform == "win32", reason="require unix-like signal handling")
 async def test_server_interrupt(graceful_sigint):
     async def interrupt_running(srv: Server):
         while not srv.started:
