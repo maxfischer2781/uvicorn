@@ -15,6 +15,7 @@ class CaughtSigint(Exception):
 @pytest.fixture
 def graceful_sigint():
     """Fixture that replaces SIGINT handling with a normal exception"""
+
     def raise_handler(*args):
         raise CaughtSigint
 
