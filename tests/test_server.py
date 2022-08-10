@@ -47,3 +47,5 @@ async def test_server_interrupt(graceful_sigint):
     asyncio.create_task(interrupt_running(server))
     with pytest.raises(graceful_sigint):
         await server.serve()
+    # set by the server's graceful exit handler
+    assert server.should_exit
