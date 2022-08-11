@@ -30,12 +30,14 @@ async def dummy_app(scope, receive, send):
 
 
 @pytest.mark.anyio
-@pytest.mark.skipif(sys.platform == "win32", reason="require unix-like signal handling")
 async def test_server_interrupt(graceful_sigint):
     async def interrupt_running(srv: Server):
         while not srv.started:
             await asyncio.sleep(0.01)
-        os.kill(os.getpid(), signal.SIGINT)
+        if hasattr(signal, "CTRL_C_EVENT"):
+            os.kill(0, signal.CTRL_C_EVENT)
+        else:
+            os.kill(os.getpid(), signal.SIGINT)
 
     server = Server(
         Config(
