@@ -15,7 +15,7 @@ class CaughtSigint(Exception):
 
 
 @pytest.fixture
-def graceful_sigint():
+def sigint_exception():
     """Fixture that replaces SIGINT handling with a normal exception"""
 
     def raise_handler(*args):
@@ -32,7 +32,7 @@ async def dummy_app(scope, receive, send):
 
 @pytest.mark.anyio
 @pytest.mark.skipif(sys.platform == "win32", reason="require unix-like signal handling")
-async def test_server_interrupt(graceful_sigint):
+async def test_server_interrupt(sigint_exception):
     """Test interrupting a Server that is run explicitly inside asyncio"""
 
     async def interrupt_running(srv: Server):
@@ -42,7 +42,7 @@ async def test_server_interrupt(graceful_sigint):
 
     server = Server(Config(app=dummy_app, loop="asyncio"))
     asyncio.create_task(interrupt_running(server))
-    with pytest.raises(graceful_sigint):
+    with pytest.raises(sigint_exception):
         await server.serve()
     # set by the server's graceful exit handler
     assert server.should_exit
