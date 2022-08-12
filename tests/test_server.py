@@ -96,9 +96,7 @@ asyncio.run(main())
         process.send_signal(interrupt_sig)
         try:
             process.communicate(timeout=1)
-        except subprocess.TimeoutExpired:  # pragma: no cover
-            process.terminate()
-            raise
-        else:
             assert process.poll() is not None, "program did not stop after interrupt"
             assert process.returncode != 0, "program did not report interrupt"
+        finally:
+            process.terminate()
