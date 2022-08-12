@@ -37,13 +37,7 @@ async def test_server_interrupt(graceful_sigint):
             await asyncio.sleep(0.01)
         os.kill(os.getpid(), signal.SIGINT)
 
-    server = Server(
-        Config(
-            app=dummy_app,
-            loop="asyncio",
-            limit_max_requests=1,
-        )
-    )
+    server = Server(Config(app=dummy_app, loop="asyncio"))
     asyncio.create_task(interrupt_running(server))
     with pytest.raises(graceful_sigint):
         await server.serve()
